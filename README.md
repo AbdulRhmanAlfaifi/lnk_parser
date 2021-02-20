@@ -24,8 +24,7 @@ Here is an example of using the lib to parse LNK file from path:
 use std::fs::File;
 fn main(){
     // Open the LNK file
-    let file = File::open("samples\\WIN10\\1607_14393\\windows_generated.lnk")
-    					.unwrap();
+    let file = File::open("samples\\WIN10\\1607_14393\\windows_generated.lnk").unwrap();
     // Pass the `File` instance to `from_reader` function.
     // `std::fs::File` implements `Read` & `Seek` traits.
     let lnk_file = LNKParser::from_reader(file);
@@ -128,4 +127,4 @@ sample output in JSON format:
 
 # LNK File Structure
 
-I wrote a blog post explains the LNK file structure, you can check it out for [here](https://u0041.co/blog/post/4).
+I wrote a blog post explains the LNK file structure, you can check it out from [here](https://u0041.co/blog/post/4).
