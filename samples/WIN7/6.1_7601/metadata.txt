@@ -1,0 +1,83 @@
+PS C:\Users\u0041\Desktop\test> get-item -path test.txt | fl *
+
+
+PSPath            : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test\test.txt
+PSParentPath      : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test
+PSChildName       : test.txt
+PSDrive           : C
+PSProvider        : Microsoft.PowerShell.Core\FileSystem
+PSIsContainer     : False
+VersionInfo       : File:             C:\Users\u0041\Desktop\test\test.txt
+                    InternalName:
+                    OriginalFilename:
+                    FileVersion:
+                    FileDescription:
+                    Product:
+                    ProductVersion:
+                    Debug:            False
+                    Patched:          False
+                    PreRelease:       False
+                    PrivateBuild:     False
+                    SpecialBuild:     False
+                    Language:
+
+BaseName          : test
+Mode              : -a---
+Name              : test.txt
+Length            : 4
+DirectoryName     : C:\Users\u0041\Desktop\test
+Directory         : C:\Users\u0041\Desktop\test
+IsReadOnly        : False
+Exists            : True
+FullName          : C:\Users\u0041\Desktop\test\test.txt
+Extension         : .txt
+CreationTime      : 2/8/2021 3:58:59 PM
+CreationTimeUtc   : 2/8/2021 12:58:59 PM
+LastAccessTime    : 2/8/2021 3:58:59 PM
+LastAccessTimeUtc : 2/8/2021 12:58:59 PM
+LastWriteTime     : 2/8/2021 3:59:03 PM
+LastWriteTimeUtc  : 2/8/2021 12:59:03 PM
+Attributes        : Archive
+
+
+
+PS C:\Users\u0041\Desktop\test> Get-Item -Path .\?????.txt | fl *
+
+
+PSPath            : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test\?????.txt
+PSParentPath      : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test
+PSChildName       : ?????.txt
+PSDrive           : C
+PSProvider        : Microsoft.PowerShell.Core\FileSystem
+PSIsContainer     : False
+VersionInfo       : File:             C:\Users\u0041\Desktop\test\?????.txt
+                    InternalName:
+                    OriginalFilename:
+                    FileVersion:
+                    FileDescription:
+                    Product:
+                    ProductVersion:
+                    Debug:            False
+                    Patched:          False
+                    PreRelease:       False
+                    PrivateBuild:     False
+                    SpecialBuild:     False
+                    Language:
+
+BaseName          : ?????
+Mode              : -a---
+Name              : ?????.txt
+Length            : 13
+DirectoryName     : C:\Users\u0041\Desktop\test
+Directory         : C:\Users\u0041\Desktop\test
+IsReadOnly        : False
+Exists            : True
+FullName          : C:\Users\u0041\Desktop\test\?????.txt
+Extension         : .txt
+CreationTime      : 2/8/2021 3:58:59 PM
+CreationTimeUtc   : 2/8/2021 12:58:59 PM
+LastAccessTime    : 2/8/2021 3:59:14 PM
+LastAccessTimeUtc : 2/8/2021 12:59:14 PM
+LastWriteTime     : 2/8/2021 3:59:24 PM
+LastWriteTimeUtc  : 2/8/2021 12:59:24 PM
+Attributes        : Archive

@@ -1,0 +1,87 @@
+PS C:\Users\u0041\Desktop\test> Get-Item .\test.txt | fl *
+
+
+PSPath            : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test\test.txt
+PSParentPath      : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test
+PSChildName       : test.txt
+PSDrive           : C
+PSProvider        : Microsoft.PowerShell.Core\FileSystem
+PSIsContainer     : False
+Mode              : -a----
+VersionInfo       : File:             C:\Users\u0041\Desktop\test\test.txt
+                    InternalName:
+                    OriginalFilename:
+                    FileVersion:
+                    FileDescription:
+                    Product:
+                    ProductVersion:
+                    Debug:            False
+                    Patched:          False
+                    PreRelease:       False
+                    PrivateBuild:     False
+                    SpecialBuild:     False
+                    Language:
+
+BaseName          : test
+Target            : {}
+LinkType          :
+Name              : test.txt
+Length            : 4
+DirectoryName     : C:\Users\u0041\Desktop\test
+Directory         : C:\Users\u0041\Desktop\test
+IsReadOnly        : False
+Exists            : True
+FullName          : C:\Users\u0041\Desktop\test\test.txt
+Extension         : .txt
+CreationTime      : 2/8/2021 4:41:03 AM
+CreationTimeUtc   : 2/8/2021 12:41:03 PM
+LastAccessTime    : 2/8/2021 4:41:03 AM
+LastAccessTimeUtc : 2/8/2021 12:41:03 PM
+LastWriteTime     : 2/8/2021 4:41:58 AM
+LastWriteTimeUtc  : 2/8/2021 12:41:58 PM
+Attributes        : Archive
+
+
+
+PS C:\Users\u0041\Desktop\test> Get-Item .\تجربة.txt | fl *
+
+
+PSPath            : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test\تجربة.txt
+PSParentPath      : Microsoft.PowerShell.Core\FileSystem::C:\Users\u0041\Desktop\test
+PSChildName       : تجربة.txt
+PSDrive           : C
+PSProvider        : Microsoft.PowerShell.Core\FileSystem
+PSIsContainer     : False
+Mode              : -a----
+VersionInfo       : File:             C:\Users\u0041\Desktop\test\تجربة.txt
+                    InternalName:
+                    OriginalFilename:
+                    FileVersion:
+                    FileDescription:
+                    Product:
+                    ProductVersion:
+                    Debug:            False
+                    Patched:          False
+                    PreRelease:       False
+                    PrivateBuild:     False
+                    SpecialBuild:     False
+                    Language:
+
+BaseName          : تجربة
+Target            : {}
+LinkType          :
+Name              : تجربة.txt
+Length            : 13
+DirectoryName     : C:\Users\u0041\Desktop\test
+Directory         : C:\Users\u0041\Desktop\test
+IsReadOnly        : False
+Exists            : True
+FullName          : C:\Users\u0041\Desktop\test\تجربة.txt
+Extension         : .txt
+CreationTime      : 2/8/2021 4:44:25 AM
+CreationTimeUtc   : 2/8/2021 12:44:25 PM
+LastAccessTime    : 2/8/2021 4:44:25 AM
+LastAccessTimeUtc : 2/8/2021 12:44:25 PM
+LastWriteTime     : 2/8/2021 4:45:11 AM
+LastWriteTimeUtc  : 2/8/2021 12:45:11 PM
+Attributes        : Archive
