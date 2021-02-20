@@ -124,7 +124,19 @@ sample output in JSON format:
     }
 }
 ```
+## how to use the binary ?
 
+You can download the binary from the release section or from crates.io using the following command:
+
+```
+cargo install lnk_parser
+```
+
+That is it! you can execute as follows:
+
+```
+lnk_parser -h
+```
 # LNK File Structure
 
 I wrote a blog post explains the LNK file structure, you can check it out from [here](https://u0041.co/blog/post/4).
