@@ -1,11 +1,11 @@
 use clap::{App, Arg};
-use std::io::{self, Write};
-use std::fs::File;
 use glob::glob;
 use lnk_parser::LNKParser;
-use winparsingtools::traits::Normalize;
-use std::collections::HashMap;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{self, Write};
+use winparsingtools::traits::Normalize;
 
 enum OutputFormat {
     JSON,
@@ -19,13 +19,12 @@ impl OutputFormat {
             "json" => OutputFormat::JSON,
             "jsonl" => OutputFormat::JSONL,
             "csv" => OutputFormat::CSV,
-            _ => OutputFormat::CSV
+            _ => OutputFormat::CSV,
         }
     }
 }
 
-fn parse_cli_args() -> clap::ArgMatches<'static>
-{
+fn parse_cli_args() -> clap::ArgMatches<'static> {
     App::new("lnk_parser")
         .version(env!("CARGO_PKG_VERSION"))
         .author("AbdulRhman Alfaifi - @A__ALFAIFI")
@@ -36,7 +35,7 @@ fn parse_cli_args() -> clap::ArgMatches<'static>
                 .takes_value(true)
                 .multiple(true)
                 .value_name("PATH")
-                .help("Path(s) to LNK Metadata Files to be Parsed - accepts glob (Defaults to 'RecetItems' for all users)"))
+                .help("Path(s) to LNK Metadata Files to be Parsed - accepts glob (Defaults to 'RecentItems' for all users)"))
         .arg(
             Arg::with_name("output")
                 .short("-o")
@@ -64,32 +63,33 @@ fn parse_cli_args() -> clap::ArgMatches<'static>
         .get_matches()
 }
 
-fn output_data_csv(data: HashMap<String, String>) -> String
-{
-    format!("\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
-    data.get("target_full_path").unwrap(),
-    data.get("target_modification_time").unwrap(),
-    data.get("target_access_time").unwrap(),
-    data.get("target_creation_time").unwrap(),
-    data.get("target_size").unwrap(),
-    data.get("target_hostname").unwrap(),
-    data.get("lnk_full_path").unwrap(),
-    data.get("lnk_modification_time").unwrap(),
-    data.get("lnk_access_time").unwrap(),
-    data.get("lnk_creation_time").unwrap())
+fn output_data_csv(data: HashMap<String, String>) -> String {
+    format!(
+        "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
+        data.get("target_full_path").unwrap(),
+        data.get("target_modification_time").unwrap(),
+        data.get("target_access_time").unwrap(),
+        data.get("target_creation_time").unwrap(),
+        data.get("target_size").unwrap(),
+        data.get("target_hostname").unwrap(),
+        data.get("lnk_full_path").unwrap(),
+        data.get("lnk_modification_time").unwrap(),
+        data.get("lnk_access_time").unwrap(),
+        data.get("lnk_creation_time").unwrap()
+    )
 }
 
 fn main() {
     let args = parse_cli_args();
     let output_format = OutputFormat::from_str(args.value_of("output-format").unwrap());
     let output_to = args.value_of("output").unwrap();
-    let normalize = match args.occurrences_of("normalize"){
+    let normalize = match args.occurrences_of("normalize") {
         0 => false,
-        _ => true
+        _ => true,
     };
     let mut output: Box<dyn Write> = match output_to {
         "stdout" => Box::new(io::stdout()),
-        _ => Box::new(File::create(output_to).unwrap())
+        _ => Box::new(File::create(output_to).unwrap()),
     };
 
     if args.occurrences_of("no-headers") == 0 {
@@ -97,7 +97,7 @@ fn main() {
             OutputFormat::CSV => {
                 output.write(r#""target_full_path","target_modification_time","target_access_time","target_creation_time","target_size","target_hostname","lnk_full_path","lnk_modification_time","lnk_access_time","lnk_creation_time""#.as_bytes()).expect("Error Writing Data !");
                 output.write(b"\r\n").expect("Error Writing Data !");
-            },
+            }
             _ => {}
         };
     }
@@ -112,12 +112,11 @@ fn main() {
         lnk_file_paths = args.values_of("PATH").unwrap().collect();
     }
 
-
     #[derive(Debug, Serialize)]
     #[serde(untagged)]
     enum JsonRecord {
         Raw(LNKParser),
-        Normalize(HashMap<String,String>)
+        Normalize(HashMap<String, String>),
     }
     let mut json_list = vec![];
     for dir in lnk_file_paths {
@@ -126,42 +125,46 @@ fn main() {
                 Ok(path) => {
                     let full_path = path.as_path().to_str().unwrap();
                     match LNKParser::from_path(full_path) {
-                        Ok(parsed) => {
-                            match output_format {
-                                OutputFormat::JSONL => {
-                                    let json_data;
-                                    if normalize {
-                                        json_data = serde_json::to_string(&parsed.normalize()).unwrap();
-                                    }
-                                    else {
-                                        json_data = serde_json::to_string(&parsed).unwrap();
-                                    }
-                                    output.write(json_data.as_bytes()).expect("Error Writing Data !");
-                                    output.write(b"\r\n").expect("Error Writing Data !");
-                                },
-                                OutputFormat::JSON => {
-                                    if normalize {
-                                        json_list.push(JsonRecord::Normalize(parsed.normalize()));
-                                    }
-                                    else {
-                                        json_list.push(JsonRecord::Raw(parsed));
-                                    }
+                        Ok(parsed) => match output_format {
+                            OutputFormat::JSONL => {
+                                let json_data;
+                                if normalize {
+                                    json_data = serde_json::to_string(&parsed.normalize()).unwrap();
+                                } else {
+                                    json_data = serde_json::to_string(&parsed).unwrap();
                                 }
-                                OutputFormat::CSV => {
-                                    output.write(output_data_csv(parsed.normalize()).as_bytes()).expect("Error Writing Data !");
-                                    output.write(b"\r\n").expect("Error Writing Data !");
+                                output
+                                    .write(json_data.as_bytes())
+                                    .expect("Error Writing Data !");
+                                output.write(b"\r\n").expect("Error Writing Data !");
+                            }
+                            OutputFormat::JSON => {
+                                if normalize {
+                                    json_list.push(JsonRecord::Normalize(parsed.normalize()));
+                                } else {
+                                    json_list.push(JsonRecord::Raw(parsed));
                                 }
                             }
+                            OutputFormat::CSV => {
+                                output
+                                    .write(output_data_csv(parsed.normalize()).as_bytes())
+                                    .expect("Error Writing Data !");
+                                output.write(b"\r\n").expect("Error Writing Data !");
+                            }
                         },
-                        Err(e) => {eprintln!("Did not parse '{}' correctly. ERROR : '{}'", full_path, e);}
+                        Err(e) => {
+                            eprintln!("Did not parse '{}' correctly. ERROR : '{}'", full_path, e);
+                        }
                     };
-                },
-                Err(e) => eprintln!("{:?}", e)
+                }
+                Err(e) => eprintln!("{:?}", e),
             }
         }
     }
     if let OutputFormat::JSON = output_format {
         let json_data = serde_json::to_string(&json_list).unwrap();
-        output.write(json_data.as_bytes()).expect("Error Writing Data !");
+        output
+            .write(json_data.as_bytes())
+            .expect("Error Writing Data !");
     }
 }

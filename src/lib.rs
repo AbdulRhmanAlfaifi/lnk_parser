@@ -1,24 +1,26 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
-pub mod link_info;
-pub mod shell_link_header;
 pub mod extra_data;
+pub mod link_info;
 mod link_target_id_list;
+pub mod shell_link_header;
 
 use extra_data::{ExtraData, ExtraDataTypes};
-use shell_link_header::ShellLinkHeader;
 use link_info::LinkInfo;
-use serde::{Serialize, Serializer, ser::SerializeStruct};
 use link_target_id_list::LinkTargetIDList;
+use serde::{ser::SerializeStruct, Serialize, Serializer};
+use shell_link_header::ShellLinkHeader;
 
-use winparsingtools::{structs::StringData, traits::{Normalize, Path}};
-use std::{collections::HashMap, fs, io::{
-        Result,
-        Cursor,
-        Read,
-        Seek
-    }};
 use chrono::{DateTime, Utc};
+use std::{
+    collections::HashMap,
+    fs,
+    io::{Cursor, Read, Result, Seek},
+};
+use winparsingtools::{
+    structs::StringData,
+    traits::{Normalize, Path},
+};
 
 #[derive(Debug)]
 struct LnkFileMetaData {
@@ -31,20 +33,26 @@ struct LnkFileMetaData {
 impl LnkFileMetaData {
     fn from_path(path: &str) -> Result<Self> {
         let file_metadata = fs::metadata(path)?;
-        let full_path = fs::canonicalize(path)?.to_str()
-            .ok_or(std::io::Error::new(std::io::ErrorKind::Other,
-                 format!("Can not Read full_path for '{}'",path)))?.to_string().replace("\\\\?\\", "");
+        let full_path = match fs::canonicalize(path) {
+            Ok(path_buf) => path_buf
+                .to_str()
+                .ok_or(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Can not Read full_path for '{}'", path),
+                ))?
+                .to_string()
+                .replace("\\\\?\\", ""),
+            Err(_) => path.to_string(),
+        };
         let mtime: DateTime<Utc> = DateTime::from(file_metadata.created()?);
         let atime: DateTime<Utc> = DateTime::from(file_metadata.accessed()?);
         let ctime: DateTime<Utc> = DateTime::from(file_metadata.modified()?);
-        Ok(
-            Self {
-                full_path,
-                mtime,
-                ctime,
-                atime
-            }
-        )
+        Ok(Self {
+            full_path,
+            mtime,
+            ctime,
+            atime,
+        })
     }
 }
 
@@ -55,17 +63,25 @@ impl Serialize for LnkFileMetaData {
     {
         let mut state = serializer.serialize_struct("LnkFileMetaData", 4)?;
         state.serialize_field("full_path", &self.full_path)?;
-        state.serialize_field("mtime", &format!("{}", self.mtime.format("%Y-%m-%dT%H:%M:%SZ")))?;
-        state.serialize_field("atime", &format!("{}", self.atime.format("%Y-%m-%dT%H:%M:%SZ")))?;
-        state.serialize_field("ctime", &format!("{}", self.ctime.format("%Y-%m-%dT%H:%M:%SZ")))?;
+        state.serialize_field(
+            "mtime",
+            &format!("{}", self.mtime.format("%Y-%m-%dT%H:%M:%SZ")),
+        )?;
+        state.serialize_field(
+            "atime",
+            &format!("{}", self.atime.format("%Y-%m-%dT%H:%M:%SZ")),
+        )?;
+        state.serialize_field(
+            "ctime",
+            &format!("{}", self.ctime.format("%Y-%m-%dT%H:%M:%SZ")),
+        )?;
         state.end()
     }
 }
 
 /// Reads LNK file and determine its parts then parses them
 #[derive(Debug, Serialize)]
-pub struct LNKParser
-{
+pub struct LNKParser {
     #[serde(skip_serializing_if = "Option::is_none")]
     target_full_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -86,7 +102,7 @@ pub struct LNKParser
     #[serde(skip_serializing_if = "Option::is_none")]
     icon_location: Option<StringData>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra_data: Option<ExtraData>
+    extra_data: Option<ExtraData>,
 }
 
 impl LNKParser {
@@ -131,20 +147,34 @@ impl LNKParser {
         let mut working_dir = None;
         let mut command_line_arguments = None;
         let mut icon_location = None;
-        
-        if shell_link_header.flags.HasLinkTargetIDList { link_target_id_list = Some(LinkTargetIDList::from_reader(r)?); }
-        if shell_link_header.flags.HasLinkInfo { link_info = Some(LinkInfo::from_reader(r)?); }
-        if shell_link_header.flags.HasName { name_string = Some(StringData::from_reader(r)?); }
-        if shell_link_header.flags.HasRelativePath { relative_path = Some(StringData::from_reader(r)?);}
-        if shell_link_header.flags.HasWorkingDir { working_dir = Some(StringData::from_reader(r)?); }
-        if shell_link_header.flags.HasArguments { command_line_arguments = Some(StringData::from_reader(r)?); }
-        if shell_link_header.flags.HasIconLocation { icon_location = Some(StringData::from_reader(r)?); }
-        
+
+        if shell_link_header.flags.HasLinkTargetIDList {
+            link_target_id_list = Some(LinkTargetIDList::from_reader(r)?);
+        }
+        if shell_link_header.flags.HasLinkInfo {
+            link_info = Some(LinkInfo::from_reader(r)?);
+        }
+        if shell_link_header.flags.HasName {
+            name_string = Some(StringData::from_reader(r)?);
+        }
+        if shell_link_header.flags.HasRelativePath {
+            relative_path = Some(StringData::from_reader(r)?);
+        }
+        if shell_link_header.flags.HasWorkingDir {
+            working_dir = Some(StringData::from_reader(r)?);
+        }
+        if shell_link_header.flags.HasArguments {
+            command_line_arguments = Some(StringData::from_reader(r)?);
+        }
+        if shell_link_header.flags.HasIconLocation {
+            icon_location = Some(StringData::from_reader(r)?);
+        }
+
         let extra_data = match ExtraData::from_reader(r) {
             Ok(d) => Some(d),
-            Err(_) => None
+            Err(_) => None,
         };
-        
+
         let mut lnk_parser = Self {
             shell_link_header,
             link_target_id_list,
@@ -156,7 +186,7 @@ impl LNKParser {
             icon_location,
             extra_data,
             lnk_file_metadata: None,
-            target_full_path: None
+            target_full_path: None,
         };
         lnk_parser.target_full_path = lnk_parser.path();
 
@@ -171,13 +201,13 @@ impl Path for LNKParser {
                 Some(link_info_path) => Some(link_info_path),
                 None => match &self.link_target_id_list {
                     Some(link_target_id_list) => link_target_id_list.path(),
-                    None => None
-                }
+                    None => None,
+                },
             },
             None => match &self.link_target_id_list {
                 Some(link_target_id_list) => link_target_id_list.path(),
-                None => None
-            }
+                None => None,
+            },
         }
     }
 }
@@ -198,7 +228,7 @@ impl Normalize for LNKParser {
 
         target_full_path = match &self.path() {
             Some(path) => path.to_owned(),
-            None => String::new()
+            None => String::new(),
         };
 
         target_modification_time = self.shell_link_header.mtime.to_string();
@@ -207,7 +237,7 @@ impl Normalize for LNKParser {
 
         target_size = self.shell_link_header.file_size.to_string();
 
-         match &self.extra_data {
+        match &self.extra_data {
             Some(extra_data) => {
                 extra_data.extra_data_blocks.iter().find(|&edb| match edb {
                     ExtraDataTypes::Tracker(tracker) => {
@@ -215,32 +245,44 @@ impl Normalize for LNKParser {
                         true
                     }
                 });
-            },
+            }
             None => {}
         };
 
         lnk_full_path = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata.full_path.to_owned(),
-            None => String::new()
+            None => String::new(),
         };
 
         lnk_modification_time = match &self.lnk_file_metadata {
-            Some(lnk_file_metadata) => lnk_file_metadata.mtime.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
-            None => String::new()
+            Some(lnk_file_metadata) => lnk_file_metadata
+                .mtime
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string(),
+            None => String::new(),
         };
 
         lnk_access_time = match &self.lnk_file_metadata {
-            Some(lnk_file_metadata) => lnk_file_metadata.atime.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
-            None => String::new()
+            Some(lnk_file_metadata) => lnk_file_metadata
+                .atime
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string(),
+            None => String::new(),
         };
 
         lnk_creation_time = match &self.lnk_file_metadata {
-            Some(lnk_file_metadata) => lnk_file_metadata.ctime.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
-            None => String::new()
+            Some(lnk_file_metadata) => lnk_file_metadata
+                .ctime
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string(),
+            None => String::new(),
         };
-        
-        fields.insert("target_full_path".to_string(),target_full_path);
-        fields.insert("target_modification_time".to_string(), target_modification_time);
+
+        fields.insert("target_full_path".to_string(), target_full_path);
+        fields.insert(
+            "target_modification_time".to_string(),
+            target_modification_time,
+        );
         fields.insert("target_access_time".to_string(), target_access_time);
         fields.insert("target_creation_time".to_string(), target_creation_time);
         fields.insert("target_size".to_string(), target_size);

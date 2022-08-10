@@ -1,10 +1,10 @@
 [package]
 name = "lnk_parser"
 description  = "A full rust implementation to parse windows LNK files"
-version = "0.1.0"
+version = "0.2.0"
 homepage = "https://u0041.co/blog/post/4"
 repository = "https://github.com/AbdulRhmanAlfaifi/lnk_parser"
-authors = ["AbdulRhman Alfaifi <a.alfaifi.14@gmail.com>"]
+authors = ["AbdulRhman Alfaifi <@A__ALFAIFI>"]
 edition = "2018"
 default-run = "lnk_parser"
 license = "MIT"
