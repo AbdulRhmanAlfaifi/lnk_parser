@@ -1,4 +1,4 @@
-use winparsingtools::{structs::Guid, utils::read_utf8_string, ReaderError};
+use winparsingtools::{structs::Guid, utils::read_cp1252_string, ReaderError};
 use std::io::{Read, Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::Serialize;
@@ -27,7 +27,7 @@ impl TrackerDataBlock {
         let version = r.read_u32::<LittleEndian>()?;
         let mut machine_id_bytes = [0;16];
         r.read_exact(&mut machine_id_bytes)?;
-        let machine_id = read_utf8_string(&mut Cursor::new(machine_id_bytes), None)?;
+        let machine_id = read_cp1252_string(&mut Cursor::new(machine_id_bytes), None)?;
         let volume_droid = Guid::from_reader(r)?;
         let file_droid = Guid::from_reader(r)?;
         let volume_droid_birth = Guid::from_reader(r)?;

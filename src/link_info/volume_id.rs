@@ -86,7 +86,7 @@ impl VolumeID {
                 0 => None,
                 _ => {
                     r.seek(SeekFrom::Start((volume_label_offset-4) as u64))?;
-                    match utils::read_utf8_string(r, None) {
+                    match utils::read_cp1252_string(r, None) {
                     Ok(s) => match s {
                         s if !s.is_empty() => Some(s),
                         _ => None

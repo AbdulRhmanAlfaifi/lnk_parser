@@ -101,7 +101,7 @@ impl LinkInfo {
                 0 => None,
                 offset => {
                     r.seek(SeekFrom::Start((offset - 4) as u64))?;
-                    match utils::read_utf8_string(r, None)? {
+                    match utils::read_cp1252_string(r, None)? {
                         s if !s.is_empty() => Some(s),
                         _ => None,
                     }
@@ -124,7 +124,7 @@ impl LinkInfo {
                 0 => None,
                 offset => {
                     r.seek(SeekFrom::Start((offset - 4) as u64))?;
-                    match utils::read_utf8_string(r, None)? {
+                    match utils::read_cp1252_string(r, None)? {
                         s if !s.is_empty() => Some(s),
                         _ => None,
                     }
