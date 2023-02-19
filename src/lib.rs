@@ -6,6 +6,7 @@ mod link_target_id_list;
 pub mod shell_link_header;
 
 use extra_data::{ExtraData, ExtraDataTypes};
+use getset::Getters;
 use link_info::LinkInfo;
 use link_target_id_list::LinkTargetIDList;
 use serde::{ser::SerializeStruct, Serialize, Serializer};
@@ -15,15 +16,16 @@ use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
     fs,
-    io::{Cursor, Read, Result, Seek},
+    io::{Cursor, Read, Seek},
 };
 use winparsingtools::{
     structs::StringData,
-    traits::{Normalize, Path},
+    traits::{Normalize, Path}, ReaderError,
 };
 
-#[derive(Debug)]
-struct LnkFileMetaData {
+#[derive(Debug, Getters, Clone)]
+#[getset(get = "pub with_prefix")]
+pub struct LnkFileMetaData {
     full_path: String,
     mtime: DateTime<Utc>,
     atime: DateTime<Utc>,
@@ -31,7 +33,7 @@ struct LnkFileMetaData {
 }
 
 impl LnkFileMetaData {
-    fn from_path(path: &str) -> Result<Self> {
+    fn from_path(path: &str) -> Result<Self, ReaderError> {
         let file_metadata = fs::metadata(path)?;
         let full_path = match fs::canonicalize(path) {
             Ok(path_buf) => path_buf
@@ -80,7 +82,8 @@ impl Serialize for LnkFileMetaData {
 }
 
 /// Reads LNK file and determine its parts then parses them
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Getters)]
+#[getset(get = "pub with_prefix")]
 pub struct LNKParser {
     #[serde(skip_serializing_if = "Option::is_none")]
     target_full_path: Option<String>,
@@ -114,7 +117,7 @@ impl LNKParser {
     ///     println!("{:?}", lnk_file);
     /// }
     /// ```
-    pub fn from_path(path: &str) -> Result<Self> {
+    pub fn from_path(path: &str) -> Result<Self, ReaderError> {
         let lnk_file_metadata = LnkFileMetaData::from_path(path)?;
         let mut lnk_file_reader = fs::File::open(path)?;
         let mut lnk_parser = Self::from_reader(&mut lnk_file_reader)?;
@@ -122,7 +125,7 @@ impl LNKParser {
         Ok(lnk_parser)
     }
     /// Parse the LNK file data from buffer
-    pub fn from_buffer(buf: &[u8]) -> Result<Self> {
+    pub fn from_buffer(buf: &[u8]) -> Result<Self, ReaderError> {
         Self::from_reader(&mut Cursor::new(buf))
     }
     /// Parse LNK file from an instance that implement `Read` & `Seek` traits.
@@ -138,7 +141,7 @@ impl LNKParser {
     ///     println!("{:?}", lnk_file);
     /// }
     /// ```
-    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self> {
+    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self, ReaderError> {
         let shell_link_header = ShellLinkHeader::from_reader(r)?;
         let mut link_target_id_list = None;
         let mut link_info = None;

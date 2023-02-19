@@ -1,20 +1,20 @@
 //! [LinkInfo](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/6813269d-0cc8-4be2-933f-e96e8e3412dc) related structs
 
-mod volume_id;
 mod common_network_relative_link;
-use winparsingtools::{
-    utils,
-    traits::Path
-};
+mod volume_id;
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::fmt::{self, Display};
-use std::io::{Cursor, Read, Result, Seek, SeekFrom};
-use serde::{Serialize, Serializer};
-pub use volume_id::VolumeID;
 pub use common_network_relative_link::CommonNetworkRelativeLink;
+use getset::Getters;
+use serde::{Serialize, Serializer};
+use winparsingtools::ReaderError;
+use std::fmt::{self, Display};
+use std::io::{Cursor, Read, Seek, SeekFrom};
+pub use volume_id::VolumeID;
+use winparsingtools::{traits::Path, utils};
 
 /// The LinkInfo structure specifies information necessary to resolve a link target if it is not found in its original location.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Getters)]
+#[getset(get = "pub with_prefix")]
 pub struct LinkInfo {
     #[serde(skip_serializing)]
     pub size: u32,
@@ -45,15 +45,15 @@ pub struct LinkInfo {
 }
 
 impl LinkInfo {
-    pub fn from_buffer(buf: &[u8]) -> Result<Self> {
+    pub fn from_buffer(buf: &[u8]) -> Result<Self, ReaderError> {
         Self::from_reader(&mut Cursor::new(buf))
     }
 
-    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self> {
+    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self, ReaderError> {
         let size = r.read_u32::<LittleEndian>()?;
-        let mut link_info_data = vec![0;(size - 4) as usize];
+        let mut link_info_data = vec![0; (size - 4) as usize];
         r.read_exact(&mut link_info_data)?;
-        let r = & mut Cursor::new(link_info_data);
+        let r = &mut Cursor::new(link_info_data);
         let header_size = r.read_u32::<LittleEndian>()?;
         let flags = LinkInfoFlags::from_u32(r.read_u32::<LittleEndian>()?)?;
         let volume_id_offset = r.read_u32::<LittleEndian>()?;
@@ -63,7 +63,7 @@ impl LinkInfo {
 
         let mut local_base_path_offset_unicode = None;
         let mut common_path_suffix_offset_unicode = None;
-        
+
         // Only available if the header size is greater than or equal to 0x24
         if header_size >= 0x24 {
             local_base_path_offset_unicode = Some(r.read_u32::<LittleEndian>()?);
@@ -74,88 +74,62 @@ impl LinkInfo {
         let mut common_network_relative_link = None;
 
         if flags.VolumeIDAndLocalBasePath {
-            r.seek(SeekFrom::Start((volume_id_offset-4) as u64))?;
+            r.seek(SeekFrom::Start((volume_id_offset - 4) as u64))?;
             volume_id = Some(VolumeID::from_reader(r)?);
         }
 
-        if flags.CommonNetworkRelativeLinkAndPathSuffix { 
-            r.seek(SeekFrom::Start((common_network_relative_link_offset-4) as u64))?;
+        if flags.CommonNetworkRelativeLinkAndPathSuffix {
+            r.seek(SeekFrom::Start(
+                (common_network_relative_link_offset - 4) as u64,
+            ))?;
             common_network_relative_link = Some(CommonNetworkRelativeLink::from_reader(r)?);
         }
-        
-        let local_base_path;
-        let common_path_suffix;
 
         // Read unicode local_base_path if available, else read normal local_base_path
-        local_base_path = match local_base_path_offset_unicode {
-            Some(offset) => {
-                match offset {
-                    0 => None,
-                    _ => {
-                        r.seek(SeekFrom::Start((offset-4) as u64))?;
-                        match utils::read_utf16_string(r, None) {
-                            Ok(s) => match s {
-                                s if !s.is_empty() => Some(s),
-                                _ => None 
-                            },
-                            Err(_) => None
-
-                        }
+        let local_base_path = match local_base_path_offset_unicode {
+            Some(offset) => match offset {
+                0 => None,
+                _ => {
+                    r.seek(SeekFrom::Start((offset - 4) as u64))?;
+                    match utils::read_utf16_string(r, None)? {
+                        s if !s.is_empty() => Some(s),
+                        _ => None,
                     }
                 }
             },
-            None => {
-                match local_base_path_offset {
-                    0 => None,
-                    offset => {
-                        r.seek(SeekFrom::Start((offset-4) as u64))?;
-                        match utils::read_utf8_string(r, None) {
-                            Ok(s) => match s {
-                                s if !s.is_empty() => Some(s),
-                                _ => None 
-                            },
-                            Err(_) => None
-
-                        }
+            None => match local_base_path_offset {
+                0 => None,
+                offset => {
+                    r.seek(SeekFrom::Start((offset - 4) as u64))?;
+                    match utils::read_utf8_string(r, None)? {
+                        s if !s.is_empty() => Some(s),
+                        _ => None,
                     }
                 }
-            }
+            },
         };
 
-
-        common_path_suffix = match common_path_suffix_offset_unicode {
-            Some(offset) => {
-                match offset {
-                    0 => None,
-                    _ => {
-                        r.seek(SeekFrom::Start((offset-4) as u64))?;
-                        match utils::read_utf16_string(r, None) {
-                            Ok(s) => match s {
-                                s if !s.is_empty() => Some(s),
-                                _ => None 
-                            },
-                            Err(_) => None
-
-                        }
+        let common_path_suffix = match common_path_suffix_offset_unicode {
+            Some(offset) => match offset {
+                0 => None,
+                _ => {
+                    r.seek(SeekFrom::Start((offset - 4) as u64))?;
+                    match utils::read_utf16_string(r, None)? {
+                        s if !s.is_empty() => Some(s),
+                        _ => None,
                     }
                 }
             },
-            None => {
-                match common_path_suffix_offset {
-                    0 => None,
-                    offset => {
-                        r.seek(SeekFrom::Start((offset-4) as u64))?;
-                        match utils::read_utf8_string(r, None) {
-                            Ok(s) => match s {
-                                s if !s.is_empty() => Some(s),
-                                _ => None 
-                            },
-                            Err(_) => None
-
-                        }
+            None => match common_path_suffix_offset {
+                0 => None,
+                offset => {
+                    r.seek(SeekFrom::Start((offset - 4) as u64))?;
+                    match utils::read_utf8_string(r, None)? {
+                        s if !s.is_empty() => Some(s),
+                        _ => None,
                     }
                 }
-            }
+            },
         };
 
         Ok(LinkInfo {
@@ -181,32 +155,32 @@ impl Path for LinkInfo {
         let path = match &self.local_base_path {
             Some(local_base_path) => match &self.common_path_suffix {
                 // if `common_path_suffix` and `local_base_path` are present then return {local_base_path}\{common_path_suffix}
-                Some(common_path_suffix) => {
-                    Some(format!("{}\\{}",local_base_path, common_path_suffix).replace("\\\\", "\\"))
-                },
-                None => Some(format!("{}",local_base_path).replace("\\\\", "\\")),
+                Some(common_path_suffix) => Some(
+                    format!("{}\\{}", local_base_path, common_path_suffix).replace("\\\\", "\\"),
+                ),
+                None => Some(format!("{}", local_base_path).replace("\\\\", "\\")),
             },
-            None => None
+            None => None,
         };
-
 
         match path {
             Some(p) => Some(p),
             None => match &self.common_network_relative_link {
-                Some(common_network_relative_link) => {
-                    match common_network_relative_link.path() {
-                        Some(common_network_relative_link_path) => Some(common_network_relative_link_path),
-                        None => None
+                Some(common_network_relative_link) => match common_network_relative_link.path() {
+                    Some(common_network_relative_link_path) => {
+                        Some(common_network_relative_link_path)
                     }
+                    None => None,
                 },
-                None => None
-            }
+                None => None,
+            },
         }
     }
 }
 
 /// Flags that specify whether the VolumeID, LocalBasePath, LocalBasePathUnicode, and CommonNetworkRelativeLink fields are present in this structure.
-#[derive(Debug)]
+#[derive(Debug, Getters)]
+#[getset(get = "pub with_prefix")]
 pub struct LinkInfoFlags {
     VolumeIDAndLocalBasePath: bool,
     CommonNetworkRelativeLinkAndPathSuffix: bool,
@@ -216,14 +190,14 @@ impl LinkInfoFlags {
     pub fn new(
         VolumeIDAndLocalBasePath: bool,
         CommonNetworkRelativeLinkAndPathSuffix: bool,
-    ) -> Result<LinkInfoFlags> {
+    ) -> Result<LinkInfoFlags, ReaderError> {
         Ok(LinkInfoFlags {
-            VolumeIDAndLocalBasePath: VolumeIDAndLocalBasePath,
-            CommonNetworkRelativeLinkAndPathSuffix: CommonNetworkRelativeLinkAndPathSuffix,
+            VolumeIDAndLocalBasePath,
+            CommonNetworkRelativeLinkAndPathSuffix,
         })
     }
 
-    pub fn from_u32(flags: u32) -> Result<LinkInfoFlags> {
+    pub fn from_u32(flags: u32) -> Result<LinkInfoFlags, ReaderError> {
         Ok(LinkInfoFlags {
             VolumeIDAndLocalBasePath: (flags & 0x01 != 0),
             CommonNetworkRelativeLinkAndPathSuffix: (flags & 0x02 != 0),

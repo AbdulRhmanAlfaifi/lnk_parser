@@ -1,5 +1,5 @@
-use winparsingtools::{structs::Guid, utils::read_utf8_string};
-use std::io::{Result, Read, Cursor};
+use winparsingtools::{structs::Guid, utils::read_utf8_string, ReaderError};
+use std::io::{Read, Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::Serialize;
 
@@ -18,11 +18,11 @@ pub struct TrackerDataBlock {
 }
 
 impl TrackerDataBlock {
-    pub fn from_buffer(buf: &[u8]) -> Result<Self>{
+    pub fn from_buffer(buf: &[u8]) -> Result<Self, ReaderError>{
         Self::from_reader(&mut Cursor::new(buf))
     }
 
-    pub fn from_reader<R: Read>(r: &mut R) -> Result<Self>{
+    pub fn from_reader<R: Read>(r: &mut R) -> Result<Self, ReaderError>{
         let size = r.read_u32::<LittleEndian>()?;
         let version = r.read_u32::<LittleEndian>()?;
         let mut machine_id_bytes = [0;16];

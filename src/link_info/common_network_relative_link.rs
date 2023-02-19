@@ -1,5 +1,6 @@
 //! [CommonNetworkRelativeLink](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/23bb5877-e3dd-4799-9f50-79f05f938537) related structs 
 
+use getset::Getters;
 use winparsingtools::{
     utils,
     traits::Path
@@ -165,7 +166,8 @@ impl From<u32> for NetworkProviderType {
 }
 /// The CommonNetworkRelativeLink structure specifies information about the network location where a
 /// link target is stored, including the mapped drive letter and the UNC path prefix.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Getters)]
+#[getset(get = "pub with_prefix")]
 pub struct CommonNetworkRelativeLink {
     #[serde(skip_serializing)]
     pub size: u32,
@@ -206,12 +208,8 @@ impl CommonNetworkRelativeLink {
         let mut network_provider_type = None;
         let mut net_name_offset_unicode = None;
         let mut device_name_offset_unicode = None;
-        let net_name;
         let mut device_name = None;
-        if flags.iter().any(|f| match f {
-            CommonNetworkRelativeLinkFlags::ValidNetType => true,
-            _ => false,
-        }) {
+        if flags.iter().any(|f| matches!(f, CommonNetworkRelativeLinkFlags::ValidNetType)) {
 
             network_provider_type = Some(NetworkProviderType::from(
                 r.read_u32::<LittleEndian>()?
@@ -226,7 +224,7 @@ impl CommonNetworkRelativeLink {
             device_name_offset_unicode = Some(r.read_u32::<LittleEndian>()?);
         }
 
-        net_name = match net_name_offset_unicode {
+        let net_name = match net_name_offset_unicode {
             Some(offset) => match offset {
                 0 => None,
                 _ => {
@@ -257,10 +255,7 @@ impl CommonNetworkRelativeLink {
 
 
         // if ValidDevice flag is set then read the device name.
-        if flags.iter().any(|f| match f {
-            CommonNetworkRelativeLinkFlags::ValidDevice => true,
-            _ => false,
-        }) {
+        if flags.iter().any(|f| matches!(f, CommonNetworkRelativeLinkFlags::ValidDevice)) {
             device_name = match device_name_offset_unicode {
                 Some(offset) => match offset {
                     0 => None,

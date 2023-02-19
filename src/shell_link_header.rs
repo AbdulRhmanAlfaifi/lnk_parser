@@ -1,6 +1,7 @@
 //! [ShellLinkHeader](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/c3376b21-0931-45e4-b2fc-a48ac0e60d15) related structs
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use getset::Getters;
 use serde::ser;
 use serde::Serialize;
 use std::fmt::{self, Display};
@@ -179,7 +180,7 @@ impl Serialize for LinkFlags {
 /* #region  ShellLinkHeader Struct Implementation */
 
 #[derive(Debug, Serialize)]
-enum ShowCommandOptions {
+pub enum ShowCommandOptions {
     SHOWNORMAL,
     SHOWMAXIMIZED,
     SHOWMINNOACTIVE,
@@ -267,7 +268,8 @@ impl Serialize for LinkHotKey {
 }
 
 /// The ShellLinkHeader structure contains identification information, timestamps, and flags that specify the presence of optional structures
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Getters)]
+#[getset(get = "pub with_prefix")]
 pub struct ShellLinkHeader {
     #[serde(skip_serializing)]
     pub header_size: u32,

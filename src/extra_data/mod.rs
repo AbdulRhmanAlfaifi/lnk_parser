@@ -2,10 +2,11 @@
 
 mod tracker_data_block;
 
-use std::io::{Result, Seek, Read, Cursor};
+use std::io::{Seek, Read, Cursor};
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::Serialize;
 use tracker_data_block::TrackerDataBlock;
+use winparsingtools::ReaderError;
 
 /// ExtraData types implemented
 #[derive(Debug, Serialize)]
@@ -21,11 +22,11 @@ pub struct ExtraData {
 }
 
 impl ExtraData {
-    pub fn from_buffer(buf: &[u8]) -> Result<Self>{
+    pub fn from_buffer(buf: &[u8]) -> Result<Self, ReaderError>{
         Self::from_reader(&mut Cursor::new(buf))
     }
 
-    pub fn from_reader<R: Read+Seek>(r: &mut R) -> Result<Self>{
+    pub fn from_reader<R: Read+Seek>(r: &mut R) -> Result<Self, ReaderError>{
         let mut extra_data_blocks: Vec<ExtraDataTypes> = Vec::new();
         loop {
             let size = r.read_u32::<LittleEndian>()?;
