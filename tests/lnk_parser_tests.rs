@@ -53,3 +53,20 @@ fn test_ws12r2() {
 
 }
 
+#[cfg(test)]
+#[test]
+fn test_ws19() {
+    
+    for entry in glob("samples\\WS19\\*\\*.lnk").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                let full_path = path.to_str().unwrap().to_string();
+                println!("{}", full_path);
+                println!("{:?}", LNKParser::from_path(&full_path).unwrap());
+            }
+            Err(e) => {eprintln!("{:?}", e);}
+        }
+    }
+
+}
+

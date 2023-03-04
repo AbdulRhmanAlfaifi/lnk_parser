@@ -112,6 +112,7 @@ impl LNKParser {
     /// Parse LNK file from path.
     /// # Example
     /// ```
+    ///# use lnk_parser::LNKParser;
     /// fn main(){
     ///     let lnk_file = LNKParser::from_path("sample.lnk");
     ///     println!("{:?}", lnk_file);
@@ -131,13 +132,14 @@ impl LNKParser {
     /// Parse LNK file from an instance that implement `Read` & `Seek` traits.
     /// # Example
     /// ```
+    ///# use lnk_parser::LNKParser;
     /// use std::fs::File;
     /// fn main(){
     ///     // Open the LNK file
-    ///     let file = File::open("sample.lnk").unwrap();
+    ///     let mut file = File::open("samples/WIN7/6.1_7601/network_share.lnk").unwrap();
     ///     // Pass the `File` instance to `from_reader` function.
     ///     // `std::fs::File` implements `Read` & `Seek` traits.
-    ///     let lnk_file = LNKParser::from_reader(file);
+    ///     let lnk_file = LNKParser::from_reader(&mut file);
     ///     println!("{:?}", lnk_file);
     /// }
     /// ```
