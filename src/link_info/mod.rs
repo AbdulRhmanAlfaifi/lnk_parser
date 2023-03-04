@@ -158,7 +158,7 @@ impl Path for LinkInfo {
                 Some(common_path_suffix) => Some(
                     format!("{}\\{}", local_base_path, common_path_suffix).replace("\\\\", "\\"),
                 ),
-                None => Some(format!("{}", local_base_path).replace("\\\\", "\\")),
+                None => Some(local_base_path.to_string().replace("\\\\", "\\")),
             },
             None => None,
         };
@@ -166,12 +166,7 @@ impl Path for LinkInfo {
         match path {
             Some(p) => Some(p),
             None => match &self.common_network_relative_link {
-                Some(common_network_relative_link) => match common_network_relative_link.path() {
-                    Some(common_network_relative_link_path) => {
-                        Some(common_network_relative_link_path)
-                    }
-                    None => None,
-                },
+                Some(common_network_relative_link) => common_network_relative_link.path(),
                 None => None,
             },
         }
@@ -223,6 +218,6 @@ impl Serialize for LinkInfoFlags {
     where
         S: Serializer,
     {
-        serializer.serialize_some(&self.to_string().split(",").collect::<Vec<&str>>())
+        serializer.serialize_some(&self.to_string().split(',').collect::<Vec<&str>>())
     }
 }

@@ -38,7 +38,7 @@ impl LnkFileMetaData {
         let full_path = match fs::canonicalize(path) {
             Ok(path_buf) => path_buf
                 .to_str()
-                .ok_or(std::io::Error::new(
+                .ok_or_else(|| std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("Can not Read full_path for '{}'", path),
                 ))?
@@ -220,27 +220,18 @@ impl Path for LNKParser {
 impl Normalize for LNKParser {
     fn normalize(&self) -> HashMap<String, String> {
         let mut fields: HashMap<String, String> = HashMap::new();
-        let target_full_path;
-        let target_modification_time;
-        let target_access_time;
-        let target_creation_time;
-        let target_size;
-        let lnk_full_path;
-        let lnk_modification_time;
-        let lnk_access_time;
-        let lnk_creation_time;
         let mut target_hostname = String::new();
 
-        target_full_path = match &self.path() {
+        let target_full_path = match &self.path() {
             Some(path) => path.to_owned(),
             None => String::new(),
         };
 
-        target_modification_time = self.shell_link_header.mtime.to_string();
-        target_access_time = self.shell_link_header.atime.to_string();
-        target_creation_time = self.shell_link_header.ctime.to_string();
+        let target_modification_time = self.shell_link_header.mtime.to_string();
+        let target_access_time = self.shell_link_header.atime.to_string();
+        let target_creation_time = self.shell_link_header.ctime.to_string();
 
-        target_size = self.shell_link_header.file_size.to_string();
+        let target_size = self.shell_link_header.file_size.to_string();
 
         match &self.extra_data {
             Some(extra_data) => {
@@ -254,12 +245,12 @@ impl Normalize for LNKParser {
             None => {}
         };
 
-        lnk_full_path = match &self.lnk_file_metadata {
+        let lnk_full_path = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata.full_path.to_owned(),
             None => String::new(),
         };
 
-        lnk_modification_time = match &self.lnk_file_metadata {
+        let lnk_modification_time = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata
                 .mtime
                 .format("%Y-%m-%dT%H:%M:%SZ")
@@ -267,7 +258,7 @@ impl Normalize for LNKParser {
             None => String::new(),
         };
 
-        lnk_access_time = match &self.lnk_file_metadata {
+        let lnk_access_time = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata
                 .atime
                 .format("%Y-%m-%dT%H:%M:%SZ")
@@ -275,7 +266,7 @@ impl Normalize for LNKParser {
             None => String::new(),
         };
 
-        lnk_creation_time = match &self.lnk_file_metadata {
+        let lnk_creation_time = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata
                 .ctime
                 .format("%Y-%m-%dT%H:%M:%SZ")

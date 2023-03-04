@@ -15,6 +15,7 @@ pub enum CommonNetworkRelativeLinkFlags {
     ValidNetType,
 }
 #[derive(Debug, Serialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum NetworkProviderType {
     WNNC_NET_MSNET,
     WNNC_NET_SMB_LANMAN,

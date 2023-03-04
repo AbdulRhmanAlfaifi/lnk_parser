@@ -171,7 +171,7 @@ impl Serialize for LinkFlags {
     where
         S: ser::Serializer,
     {
-        serializer.serialize_some(&self.to_string().split(",").collect::<Vec<&str>>())
+        serializer.serialize_some(&self.to_string().split(',').collect::<Vec<&str>>())
     }
 }
 
@@ -226,18 +226,18 @@ impl Display for LinkHotKey {
 
         let lower_byte = (self.0 & 0x00FF) as u8;
 
-        if lower_byte >= 0x30 && lower_byte <= 0x39 {
+        if (0x30..=0x39).contains(&lower_byte) {
             // numbers
-            hot_key.push(String::from(format!("{}", lower_byte - 0x30)));
-        } else if lower_byte >= 0x41 && lower_byte <= 0x5a {
+            hot_key.push(format!("{}", lower_byte - 0x30));
+        } else if (0x41..=0x5a).contains(&lower_byte) {
             // Letters
-            hot_key.push(String::from(format!("{}", lower_byte as char)));
-        } else if lower_byte >= 0x60 && lower_byte <= 0x69 {
+            hot_key.push(format!("{}", lower_byte as char));
+        } else if (0x60..=0x69).contains(&lower_byte) {
             // Numpad numbers
-            hot_key.push(String::from(format!("NUMPAD{}", lower_byte - 0x60)));
-        } else if lower_byte >= 0x70 && lower_byte <= 0x87 {
+            hot_key.push(format!("NUMPAD{}", lower_byte - 0x60));
+        } else if (0x70..=0x87).contains(&lower_byte) {
             // Function keys (from F1 to F24)
-            hot_key.push(String::from(format!("F{}", lower_byte - 0x6f)));
+            hot_key.push(format!("F{}", lower_byte - 0x6f));
         } else if lower_byte == 0x90 {
             // NUMLOCK
             hot_key.push(String::from("NUMLOCK"));
@@ -246,7 +246,7 @@ impl Display for LinkHotKey {
             hot_key.push(String::from("SCROLL"));
         } else {
             // UNKNOWN
-            hot_key.push(String::from(format!("UNKNOWN(0x{:x})", lower_byte)));
+            hot_key.push(format!("UNKNOWN(0x{:x})", lower_byte));
         }
 
         write!(f, "{}", hot_key.join(" + "))?;
@@ -259,7 +259,7 @@ impl Serialize for LinkHotKey {
     where
         S: serde::Serializer,
     {
-        if &self.to_string() == "" {
+        if self.to_string().is_empty() {
             serializer.serialize_none()
         } else {
             serializer.serialize_str(&self.to_string())
