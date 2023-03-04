@@ -241,7 +241,7 @@ impl Display for LinkHotKey {
         } else if lower_byte == 0x90 {
             // NUMLOCK
             hot_key.push(String::from("NUMLOCK"));
-        } else if lower_byte == 0x90 {
+        } else if lower_byte == 0x91 {
             // SCROLL
             hot_key.push(String::from("SCROLL"));
         } else {
