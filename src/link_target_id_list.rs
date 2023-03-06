@@ -1,8 +1,8 @@
-use std::io::{Result, Read, Cursor, Seek};
+use std::io::{Read, Cursor, Seek};
 use byteorder::{LittleEndian, ReadBytesExt};
 use winparsingtools::{
     traits::Path,
-    structs::shell_items::IDList
+    structs::shell_items::{IDList, ShellItem}, ReaderError
 };
 use serde::Serialize;
 
@@ -16,10 +16,10 @@ pub struct LinkTargetIDList {
 
 impl LinkTargetIDList {
     #[allow(dead_code)]
-    pub fn from_buffer(buf: &[u8]) -> Result<Self> {
+    pub fn from_buffer(buf: &[u8]) -> Result<Self, ReaderError> {
         Self::from_reader(&mut Cursor::new(buf))
     }
-    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self> {
+    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self, ReaderError> {
         let size = r.read_u16::<LittleEndian>()?;
         let mut id_list_data = vec![0;size as usize];
         r.read_exact(&mut id_list_data)?;
@@ -30,6 +30,9 @@ impl LinkTargetIDList {
         })
     }
 
+    pub fn items(&self) -> std::slice::Iter<'_, ShellItem> {
+        self.id_list.items()
+    }
 }
 
 impl Path for LinkTargetIDList {

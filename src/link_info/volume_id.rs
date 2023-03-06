@@ -1,4 +1,5 @@
 //! [VolumeID](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/b7b3eea7-dbff-4275-bd58-83ba3f12d87a) related structs
+use getset::Getters;
 use winparsingtools::utils;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Cursor, Read, Result, Seek, SeekFrom};
@@ -30,18 +31,19 @@ impl From<u32> for VolumeIDDriveType {
 }
 
 /// The VolumeID structure specifies information about the volume that a link target was on when the link was created.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Getters)]
+#[getset(get = "pub with_prefix")]
 pub struct VolumeID {
     #[serde(skip_serializing)]
     size: u32,
     drive_type: VolumeIDDriveType,
     serial_number: String,
     #[serde(skip_serializing)]
-    volume_lable_offset: u32,
+    volume_label_offset: u32,
     #[serde(skip_serializing)]
-    volume_lable_offset_unicode: Option<u32>,
+    volume_label_offset_unicode: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    volume_lable: Option<String>,
+    volume_label: Option<String>,
 }
 
 impl VolumeID {
@@ -58,16 +60,15 @@ impl VolumeID {
         let serial = r.read_u32::<LittleEndian>()?;
         // format the serial number as XXXX-XXXX
         let serial_number = format!("{:X}-{:X}",serial >> 16, serial & 0x0000ffff);
-        let volume_lable_offset = r.read_u32::<LittleEndian>()?;
-        let mut volume_lable_offset_unicode = None;
-        let volume_lable;
+        let volume_label_offset = r.read_u32::<LittleEndian>()?;
+        let mut volume_label_offset_unicode = None;
 
-        if volume_lable_offset == 0x14 {
+        if volume_label_offset == 0x14 {
             // it is a unicode string
-            volume_lable_offset_unicode = Some(r.read_u32::<LittleEndian>()?);
+            volume_label_offset_unicode = Some(r.read_u32::<LittleEndian>()?);
         } 
 
-        volume_lable = match volume_lable_offset_unicode {
+        let volume_label = match volume_label_offset_unicode {
             Some(offset) => match offset {
                 0 => None,
                 _ => {
@@ -81,11 +82,11 @@ impl VolumeID {
                     }
                 }
             },
-            None => match volume_lable_offset {
+            None => match volume_label_offset {
                 0 => None,
                 _ => {
-                    r.seek(SeekFrom::Start((volume_lable_offset-4) as u64))?;
-                    match utils::read_utf8_string(r, None) {
+                    r.seek(SeekFrom::Start((volume_label_offset-4) as u64))?;
+                    match utils::read_cp1252_string(r, None) {
                     Ok(s) => match s {
                         s if !s.is_empty() => Some(s),
                         _ => None
@@ -100,9 +101,9 @@ impl VolumeID {
             size,
             drive_type,
             serial_number,
-            volume_lable_offset,
-            volume_lable_offset_unicode,
-            volume_lable,
+            volume_label_offset,
+            volume_label_offset_unicode,
+            volume_label,
         })
     }
 }

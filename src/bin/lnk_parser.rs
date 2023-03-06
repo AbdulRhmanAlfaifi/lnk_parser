@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::{self, Write};
 use winparsingtools::traits::Normalize;
 
+#[allow(clippy::upper_case_acronyms)]
 enum OutputFormat {
     JSON,
     JSONL,
@@ -83,23 +84,17 @@ fn main() {
     let args = parse_cli_args();
     let output_format = OutputFormat::from_str(args.value_of("output-format").unwrap());
     let output_to = args.value_of("output").unwrap();
-    let normalize = match args.occurrences_of("normalize") {
-        0 => false,
-        _ => true,
-    };
+    let normalize = !matches!(args.occurrences_of("normalize"), 0);
     let mut output: Box<dyn Write> = match output_to {
         "stdout" => Box::new(io::stdout()),
         _ => Box::new(File::create(output_to).unwrap()),
     };
 
     if args.occurrences_of("no-headers") == 0 {
-        match output_format {
-            OutputFormat::CSV => {
-                output.write(r#""target_full_path","target_modification_time","target_access_time","target_creation_time","target_size","target_hostname","lnk_full_path","lnk_modification_time","lnk_access_time","lnk_creation_time""#.as_bytes()).expect("Error Writing Data !");
-                output.write(b"\r\n").expect("Error Writing Data !");
-            }
-            _ => {}
-        };
+        if let OutputFormat::CSV = output_format {
+            output.write_all(r#""target_full_path","target_modification_time","target_access_time","target_creation_time","target_size","target_hostname","lnk_full_path","lnk_modification_time","lnk_access_time","lnk_creation_time""#.as_bytes()).expect("Error Writing Data !");
+            output.write_all(b"\r\n").expect("Error Writing Data !");
+        }
     }
 
     let mut lnk_file_paths = vec![
@@ -127,16 +122,15 @@ fn main() {
                     match LNKParser::from_path(full_path) {
                         Ok(parsed) => match output_format {
                             OutputFormat::JSONL => {
-                                let json_data;
-                                if normalize {
-                                    json_data = serde_json::to_string(&parsed.normalize()).unwrap();
+                                let json_data = if normalize {
+                                    serde_json::to_string(&parsed.normalize()).unwrap()
                                 } else {
-                                    json_data = serde_json::to_string(&parsed).unwrap();
-                                }
+                                    serde_json::to_string(&parsed).unwrap()
+                                };
                                 output
-                                    .write(json_data.as_bytes())
+                                    .write_all(json_data.as_bytes())
                                     .expect("Error Writing Data !");
-                                output.write(b"\r\n").expect("Error Writing Data !");
+                                output.write_all(b"\r\n").expect("Error Writing Data !");
                             }
                             OutputFormat::JSON => {
                                 if normalize {
@@ -147,9 +141,9 @@ fn main() {
                             }
                             OutputFormat::CSV => {
                                 output
-                                    .write(output_data_csv(parsed.normalize()).as_bytes())
+                                    .write_all(output_data_csv(parsed.normalize()).as_bytes())
                                     .expect("Error Writing Data !");
-                                output.write(b"\r\n").expect("Error Writing Data !");
+                                output.write_all(b"\r\n").expect("Error Writing Data !");
                             }
                         },
                         Err(e) => {
@@ -164,7 +158,7 @@ fn main() {
     if let OutputFormat::JSON = output_format {
         let json_data = serde_json::to_string(&json_list).unwrap();
         output
-            .write(json_data.as_bytes())
+            .write_all(json_data.as_bytes())
             .expect("Error Writing Data !");
     }
 }

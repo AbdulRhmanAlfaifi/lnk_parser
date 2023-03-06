@@ -6,6 +6,7 @@ mod link_target_id_list;
 pub mod shell_link_header;
 
 use extra_data::{ExtraData, ExtraDataTypes};
+use getset::Getters;
 use link_info::LinkInfo;
 use link_target_id_list::LinkTargetIDList;
 use serde::{ser::SerializeStruct, Serialize, Serializer};
@@ -15,15 +16,16 @@ use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
     fs,
-    io::{Cursor, Read, Result, Seek},
+    io::{Cursor, Read, Seek},
 };
 use winparsingtools::{
     structs::StringData,
-    traits::{Normalize, Path},
+    traits::{Normalize, Path}, ReaderError,
 };
 
-#[derive(Debug)]
-struct LnkFileMetaData {
+#[derive(Debug, Getters, Clone)]
+#[getset(get = "pub with_prefix")]
+pub struct LnkFileMetaData {
     full_path: String,
     mtime: DateTime<Utc>,
     atime: DateTime<Utc>,
@@ -31,12 +33,12 @@ struct LnkFileMetaData {
 }
 
 impl LnkFileMetaData {
-    fn from_path(path: &str) -> Result<Self> {
+    fn from_path(path: &str) -> Result<Self, ReaderError> {
         let file_metadata = fs::metadata(path)?;
         let full_path = match fs::canonicalize(path) {
             Ok(path_buf) => path_buf
                 .to_str()
-                .ok_or(std::io::Error::new(
+                .ok_or_else(|| std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("Can not Read full_path for '{}'", path),
                 ))?
@@ -80,7 +82,8 @@ impl Serialize for LnkFileMetaData {
 }
 
 /// Reads LNK file and determine its parts then parses them
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Getters)]
+#[getset(get = "pub with_prefix")]
 pub struct LNKParser {
     #[serde(skip_serializing_if = "Option::is_none")]
     target_full_path: Option<String>,
@@ -109,12 +112,13 @@ impl LNKParser {
     /// Parse LNK file from path.
     /// # Example
     /// ```
+    ///# use lnk_parser::LNKParser;
     /// fn main(){
     ///     let lnk_file = LNKParser::from_path("sample.lnk");
     ///     println!("{:?}", lnk_file);
     /// }
     /// ```
-    pub fn from_path(path: &str) -> Result<Self> {
+    pub fn from_path(path: &str) -> Result<Self, ReaderError> {
         let lnk_file_metadata = LnkFileMetaData::from_path(path)?;
         let mut lnk_file_reader = fs::File::open(path)?;
         let mut lnk_parser = Self::from_reader(&mut lnk_file_reader)?;
@@ -122,23 +126,24 @@ impl LNKParser {
         Ok(lnk_parser)
     }
     /// Parse the LNK file data from buffer
-    pub fn from_buffer(buf: &[u8]) -> Result<Self> {
+    pub fn from_buffer(buf: &[u8]) -> Result<Self, ReaderError> {
         Self::from_reader(&mut Cursor::new(buf))
     }
     /// Parse LNK file from an instance that implement `Read` & `Seek` traits.
     /// # Example
     /// ```
+    ///# use lnk_parser::LNKParser;
     /// use std::fs::File;
     /// fn main(){
     ///     // Open the LNK file
-    ///     let file = File::open("sample.lnk").unwrap();
+    ///     let mut file = File::open("samples/WIN7/6.1_7601/network_share.lnk").unwrap();
     ///     // Pass the `File` instance to `from_reader` function.
     ///     // `std::fs::File` implements `Read` & `Seek` traits.
-    ///     let lnk_file = LNKParser::from_reader(file);
+    ///     let lnk_file = LNKParser::from_reader(&mut file);
     ///     println!("{:?}", lnk_file);
     /// }
     /// ```
-    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self> {
+    pub fn from_reader<R: Read + Seek>(r: &mut R) -> Result<Self, ReaderError> {
         let shell_link_header = ShellLinkHeader::from_reader(r)?;
         let mut link_target_id_list = None;
         let mut link_info = None;
@@ -215,27 +220,18 @@ impl Path for LNKParser {
 impl Normalize for LNKParser {
     fn normalize(&self) -> HashMap<String, String> {
         let mut fields: HashMap<String, String> = HashMap::new();
-        let target_full_path;
-        let target_modification_time;
-        let target_access_time;
-        let target_creation_time;
-        let target_size;
-        let lnk_full_path;
-        let lnk_modification_time;
-        let lnk_access_time;
-        let lnk_creation_time;
         let mut target_hostname = String::new();
 
-        target_full_path = match &self.path() {
+        let target_full_path = match &self.path() {
             Some(path) => path.to_owned(),
             None => String::new(),
         };
 
-        target_modification_time = self.shell_link_header.mtime.to_string();
-        target_access_time = self.shell_link_header.atime.to_string();
-        target_creation_time = self.shell_link_header.ctime.to_string();
+        let target_modification_time = self.shell_link_header.mtime.to_string();
+        let target_access_time = self.shell_link_header.atime.to_string();
+        let target_creation_time = self.shell_link_header.ctime.to_string();
 
-        target_size = self.shell_link_header.file_size.to_string();
+        let target_size = self.shell_link_header.file_size.to_string();
 
         match &self.extra_data {
             Some(extra_data) => {
@@ -249,12 +245,12 @@ impl Normalize for LNKParser {
             None => {}
         };
 
-        lnk_full_path = match &self.lnk_file_metadata {
+        let lnk_full_path = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata.full_path.to_owned(),
             None => String::new(),
         };
 
-        lnk_modification_time = match &self.lnk_file_metadata {
+        let lnk_modification_time = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata
                 .mtime
                 .format("%Y-%m-%dT%H:%M:%SZ")
@@ -262,7 +258,7 @@ impl Normalize for LNKParser {
             None => String::new(),
         };
 
-        lnk_access_time = match &self.lnk_file_metadata {
+        let lnk_access_time = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata
                 .atime
                 .format("%Y-%m-%dT%H:%M:%SZ")
@@ -270,7 +266,7 @@ impl Normalize for LNKParser {
             None => String::new(),
         };
 
-        lnk_creation_time = match &self.lnk_file_metadata {
+        let lnk_creation_time = match &self.lnk_file_metadata {
             Some(lnk_file_metadata) => lnk_file_metadata
                 .ctime
                 .format("%Y-%m-%dT%H:%M:%SZ")
