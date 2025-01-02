@@ -6,10 +6,10 @@ use byteorder::{LittleEndian, ReadBytesExt};
 pub use common_network_relative_link::CommonNetworkRelativeLink;
 use getset::Getters;
 use serde::{Serialize, Serializer};
-use winparsingtools::ReaderError;
 use std::fmt::{self, Display};
 use std::io::{Cursor, Read, Seek, SeekFrom};
 pub use volume_id::VolumeID;
+use winparsingtools::ReaderError;
 use winparsingtools::{traits::Path, utils};
 
 /// The LinkInfo structure specifies information necessary to resolve a link target if it is not found in its original location.

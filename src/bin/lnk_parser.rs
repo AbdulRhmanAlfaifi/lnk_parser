@@ -66,7 +66,7 @@ fn parse_cli_args() -> clap::ArgMatches<'static> {
 
 fn output_data_csv(data: HashMap<String, String>) -> String {
     format!(
-        "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
+        "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
         data.get("target_full_path").unwrap(),
         data.get("target_modification_time").unwrap(),
         data.get("target_access_time").unwrap(),
@@ -76,7 +76,8 @@ fn output_data_csv(data: HashMap<String, String>) -> String {
         data.get("lnk_full_path").unwrap(),
         data.get("lnk_modification_time").unwrap(),
         data.get("lnk_access_time").unwrap(),
-        data.get("lnk_creation_time").unwrap()
+        data.get("lnk_creation_time").unwrap(),
+        data.get("mac_address").unwrap()
     )
 }
 
@@ -92,7 +93,7 @@ fn main() {
 
     if args.occurrences_of("no-headers") == 0 {
         if let OutputFormat::CSV = output_format {
-            output.write_all(r#""target_full_path","target_modification_time","target_access_time","target_creation_time","target_size","target_hostname","lnk_full_path","lnk_modification_time","lnk_access_time","lnk_creation_time""#.as_bytes()).expect("Error Writing Data !");
+            output.write_all(r#""target_full_path","target_modification_time","target_access_time","target_creation_time","target_size","target_hostname","lnk_full_path","lnk_modification_time","lnk_access_time","lnk_creation_time","mac_address""#.as_bytes()).expect("Error Writing Data !");
             output.write_all(b"\r\n").expect("Error Writing Data !");
         }
     }

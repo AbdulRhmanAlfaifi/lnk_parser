@@ -17,10 +17,12 @@ use std::{
     collections::HashMap,
     fs,
     io::{Cursor, Read, Seek},
+    time::SystemTime,
 };
 use winparsingtools::{
     structs::StringData,
-    traits::{Normalize, Path}, ReaderError,
+    traits::{Normalize, Path},
+    ReaderError,
 };
 
 #[derive(Debug, Getters, Clone)]
@@ -38,17 +40,28 @@ impl LnkFileMetaData {
         let full_path = match fs::canonicalize(path) {
             Ok(path_buf) => path_buf
                 .to_str()
-                .ok_or_else(|| std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Can not Read full_path for '{}'", path),
-                ))?
+                .ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Can not Read full_path for '{}'", path),
+                    )
+                })?
                 .to_string()
                 .replace("\\\\?\\", ""),
             Err(_) => path.to_string(),
         };
-        let mtime: DateTime<Utc> = DateTime::from(file_metadata.created()?);
-        let atime: DateTime<Utc> = DateTime::from(file_metadata.accessed()?);
-        let ctime: DateTime<Utc> = DateTime::from(file_metadata.modified()?);
+        let mtime: DateTime<Utc> = DateTime::from(match file_metadata.created() {
+            Ok(date) => date,
+            Err(_) => SystemTime::UNIX_EPOCH,
+        });
+        let atime: DateTime<Utc> = DateTime::from(match file_metadata.accessed() {
+            Ok(date) => date,
+            Err(_) => SystemTime::UNIX_EPOCH,
+        });
+        let ctime: DateTime<Utc> = DateTime::from(match file_metadata.modified() {
+            Ok(date) => date,
+            Err(_) => SystemTime::UNIX_EPOCH,
+        });
         Ok(Self {
             full_path,
             mtime,
@@ -152,27 +165,92 @@ impl LNKParser {
         let mut working_dir = None;
         let mut command_line_arguments = None;
         let mut icon_location = None;
-
         if shell_link_header.flags.HasLinkTargetIDList {
             link_target_id_list = Some(LinkTargetIDList::from_reader(r)?);
         }
         if shell_link_header.flags.HasLinkInfo {
             link_info = Some(LinkInfo::from_reader(r)?);
         }
+
         if shell_link_header.flags.HasName {
-            name_string = Some(StringData::from_reader(r)?);
+            let offset = r.seek(std::io::SeekFrom::Current(0))?;
+            name_string = match shell_link_header.flags.IsUnicode {
+                true => Some(StringData::from_reader(r)?),
+                false => {
+                    r.seek(std::io::SeekFrom::Start(offset))?;
+                    match StringData::from_reader_cp1252(r) {
+                        Ok(s) => Some(s),
+                        Err(_) => {
+                            r.seek(std::io::SeekFrom::Start(offset))?;
+                            Some(StringData::from_reader_utf8(r)?)
+                        }
+                    }
+                }
+            };
         }
         if shell_link_header.flags.HasRelativePath {
-            relative_path = Some(StringData::from_reader(r)?);
+            let offset = r.seek(std::io::SeekFrom::Current(0))?;
+            relative_path = match shell_link_header.flags.IsUnicode {
+                true => Some(StringData::from_reader(r)?),
+                false => {
+                    r.seek(std::io::SeekFrom::Start(offset))?;
+                    match StringData::from_reader_cp1252(r) {
+                        Ok(s) => Some(s),
+                        Err(_) => {
+                            r.seek(std::io::SeekFrom::Start(offset))?;
+                            Some(StringData::from_reader_utf8(r)?)
+                        }
+                    }
+                }
+            };
         }
         if shell_link_header.flags.HasWorkingDir {
-            working_dir = Some(StringData::from_reader(r)?);
+            let offset = r.seek(std::io::SeekFrom::Current(0))?;
+            working_dir = match shell_link_header.flags.IsUnicode {
+                true => Some(StringData::from_reader(r)?),
+                false => {
+                    r.seek(std::io::SeekFrom::Start(offset))?;
+                    match StringData::from_reader_cp1252(r) {
+                        Ok(s) => Some(s),
+                        Err(_) => {
+                            r.seek(std::io::SeekFrom::Start(offset))?;
+                            Some(StringData::from_reader_utf8(r)?)
+                        }
+                    }
+                }
+            };
         }
         if shell_link_header.flags.HasArguments {
-            command_line_arguments = Some(StringData::from_reader(r)?);
+            let offset = r.seek(std::io::SeekFrom::Current(0))?;
+            command_line_arguments = match shell_link_header.flags.IsUnicode {
+                true => Some(StringData::from_reader(r)?),
+                false => {
+                    r.seek(std::io::SeekFrom::Start(offset))?;
+                    match StringData::from_reader_cp1252(r) {
+                        Ok(s) => Some(s),
+                        Err(_) => {
+                            r.seek(std::io::SeekFrom::Start(offset))?;
+                            Some(StringData::from_reader_utf8(r)?)
+                        }
+                    }
+                }
+            };
         }
         if shell_link_header.flags.HasIconLocation {
-            icon_location = Some(StringData::from_reader(r)?);
+            let offset = r.seek(std::io::SeekFrom::Current(0))?;
+            icon_location = match shell_link_header.flags.IsUnicode {
+                true => Some(StringData::from_reader(r)?),
+                false => {
+                    r.seek(std::io::SeekFrom::Start(offset))?;
+                    match StringData::from_reader_cp1252(r) {
+                        Ok(s) => Some(s),
+                        Err(_) => {
+                            r.seek(std::io::SeekFrom::Start(offset))?;
+                            Some(StringData::from_reader_utf8(r)?)
+                        }
+                    }
+                }
+            };
         }
 
         let extra_data = match ExtraData::from_reader(r) {
@@ -279,6 +357,16 @@ impl Normalize for LNKParser {
             "target_modification_time".to_string(),
             target_modification_time,
         );
+
+        let mac_address = match &self.extra_data {
+            Some(ed) => match &ed.extra_data_blocks.get(0) {
+                Some(item) => match item {
+                    ExtraDataTypes::Tracker(t) => t.get_mac_address(),
+                },
+                None => String::from("00:00:00:00:00:00"),
+            },
+            None => String::from("00:00:00:00:00:00"),
+        };
         fields.insert("target_access_time".to_string(), target_access_time);
         fields.insert("target_creation_time".to_string(), target_creation_time);
         fields.insert("target_size".to_string(), target_size);
@@ -287,6 +375,7 @@ impl Normalize for LNKParser {
         fields.insert("lnk_modification_time".to_string(), lnk_modification_time);
         fields.insert("lnk_access_time".to_string(), lnk_access_time);
         fields.insert("lnk_creation_time".to_string(), lnk_creation_time);
+        fields.insert("mac_address".to_string(), mac_address);
         fields
     }
 }

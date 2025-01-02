@@ -10,6 +10,7 @@ use winparsingtools::ReaderError;
 
 /// ExtraData types implemented
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ExtraDataTypes {
     Tracker(TrackerDataBlock),
 }
