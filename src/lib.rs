@@ -10,13 +10,13 @@ use getset::Getters;
 use link_info::LinkInfo;
 use link_target_id_list::LinkTargetIDList;
 use serde::{ser::SerializeStruct, Serialize, Serializer};
-use shell_link_header::ShellLinkHeader;
+use shell_link_header::{LinkFlags, ShellLinkHeader};
 
 use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
     fs,
-    io::{Cursor, Read, Seek},
+    io::{Cursor, Read, Seek, SeekFrom},
     time::SystemTime,
 };
 use winparsingtools::{
@@ -121,6 +121,29 @@ pub struct LNKParser {
     extra_data: Option<ExtraData>,
 }
 
+#[inline]
+fn seek_string_data<R: Read + Seek>(r: &mut R, flags: &LinkFlags) -> Result<StringData, ReaderError> {
+    let offset = r.seek(SeekFrom::Current(0))?;
+    let seek_pos = SeekFrom::Start(offset);
+    
+    if flags.IsUnicode {
+        return Ok(StringData::from_reader(r)?)
+    } else {
+        r.seek(seek_pos)?;
+        
+        match StringData::from_reader_cp1252(r) {
+            Ok(s) => {
+                return Ok(s)
+            },
+            Err(_) => {
+                r.seek(seek_pos)?;
+
+                return Ok(StringData::from_reader_utf8(r)?);
+            }
+        }
+    }
+}
+
 impl LNKParser {
     /// Parse LNK file from path.
     /// # Example
@@ -165,98 +188,36 @@ impl LNKParser {
         let mut working_dir = None;
         let mut command_line_arguments = None;
         let mut icon_location = None;
+
         if shell_link_header.flags.HasLinkTargetIDList {
             link_target_id_list = Some(LinkTargetIDList::from_reader(r)?);
         }
+
         if shell_link_header.flags.HasLinkInfo {
             link_info = Some(LinkInfo::from_reader(r)?);
         }
 
         if shell_link_header.flags.HasName {
-            let offset = r.seek(std::io::SeekFrom::Current(0))?;
-            name_string = match shell_link_header.flags.IsUnicode {
-                true => Some(StringData::from_reader(r)?),
-                false => {
-                    r.seek(std::io::SeekFrom::Start(offset))?;
-                    match StringData::from_reader_cp1252(r) {
-                        Ok(s) => Some(s),
-                        Err(_) => {
-                            r.seek(std::io::SeekFrom::Start(offset))?;
-                            Some(StringData::from_reader_utf8(r)?)
-                        }
-                    }
-                }
-            };
-        }
-        if shell_link_header.flags.HasRelativePath {
-            let offset = r.seek(std::io::SeekFrom::Current(0))?;
-            relative_path = match shell_link_header.flags.IsUnicode {
-                true => Some(StringData::from_reader(r)?),
-                false => {
-                    r.seek(std::io::SeekFrom::Start(offset))?;
-                    match StringData::from_reader_cp1252(r) {
-                        Ok(s) => Some(s),
-                        Err(_) => {
-                            r.seek(std::io::SeekFrom::Start(offset))?;
-                            Some(StringData::from_reader_utf8(r)?)
-                        }
-                    }
-                }
-            };
-        }
-        if shell_link_header.flags.HasWorkingDir {
-            let offset = r.seek(std::io::SeekFrom::Current(0))?;
-            working_dir = match shell_link_header.flags.IsUnicode {
-                true => Some(StringData::from_reader(r)?),
-                false => {
-                    r.seek(std::io::SeekFrom::Start(offset))?;
-                    match StringData::from_reader_cp1252(r) {
-                        Ok(s) => Some(s),
-                        Err(_) => {
-                            r.seek(std::io::SeekFrom::Start(offset))?;
-                            Some(StringData::from_reader_utf8(r)?)
-                        }
-                    }
-                }
-            };
-        }
-        if shell_link_header.flags.HasArguments {
-            let offset = r.seek(std::io::SeekFrom::Current(0))?;
-            command_line_arguments = match shell_link_header.flags.IsUnicode {
-                true => Some(StringData::from_reader(r)?),
-                false => {
-                    r.seek(std::io::SeekFrom::Start(offset))?;
-                    match StringData::from_reader_cp1252(r) {
-                        Ok(s) => Some(s),
-                        Err(_) => {
-                            r.seek(std::io::SeekFrom::Start(offset))?;
-                            Some(StringData::from_reader_utf8(r)?)
-                        }
-                    }
-                }
-            };
-        }
-        if shell_link_header.flags.HasIconLocation {
-            let offset = r.seek(std::io::SeekFrom::Current(0))?;
-            icon_location = match shell_link_header.flags.IsUnicode {
-                true => Some(StringData::from_reader(r)?),
-                false => {
-                    r.seek(std::io::SeekFrom::Start(offset))?;
-                    match StringData::from_reader_cp1252(r) {
-                        Ok(s) => Some(s),
-                        Err(_) => {
-                            r.seek(std::io::SeekFrom::Start(offset))?;
-                            Some(StringData::from_reader_utf8(r)?)
-                        }
-                    }
-                }
-            };
+            name_string = Some(seek_string_data(r, &shell_link_header.flags)?);
         }
 
-        let extra_data = match ExtraData::from_reader(r) {
-            Ok(d) => Some(d),
-            Err(_) => None,
-        };
+        if shell_link_header.flags.HasRelativePath {
+            relative_path = Some(seek_string_data(r, &shell_link_header.flags)?)
+        }
+
+        if shell_link_header.flags.HasWorkingDir {
+            working_dir = Some(seek_string_data(r, &shell_link_header.flags)?)
+        }
+
+        if shell_link_header.flags.HasArguments {
+            command_line_arguments = Some(seek_string_data(r, &shell_link_header.flags)?)
+        }
+
+        if shell_link_header.flags.HasIconLocation {
+            icon_location = Some(seek_string_data(r, &shell_link_header.flags)?)
+        }
+
+        let extra_data = ExtraData::from_reader(r).ok();
 
         let mut lnk_parser = Self {
             shell_link_header,
