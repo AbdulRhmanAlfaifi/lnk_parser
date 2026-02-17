@@ -136,8 +136,6 @@ Or build from source:
 ```
 cargo build --release --features cli
 ```
-```
-```
 
 That is it! you can execute as follows:
 
