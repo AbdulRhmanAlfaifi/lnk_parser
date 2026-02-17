@@ -40,7 +40,7 @@ jobs:
         with:
           command: ${{ matrix.platform.command }}
           target: ${{ matrix.platform.target }}
-          args: "--release"
+          args: "--release --features cli"
 
       - name: Rename Files
         shell: bash

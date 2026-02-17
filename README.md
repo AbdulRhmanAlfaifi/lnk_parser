@@ -7,7 +7,7 @@
 Start by adding the lib to your `Cargo.toml` file as follows:
 
 ```
-lnk_parser = "0.1.0"
+lnk_parser = "0.4.3"
 ```
 
 or from the GitHub repo (latest updates):
@@ -130,6 +130,13 @@ You can download the binary from the release section or from crates.io using the
 
 ```
 cargo install lnk_parser
+```
+
+Or build from source:
+```
+cargo build --release --features cli
+```
+```
 ```
 
 That is it! you can execute as follows:
