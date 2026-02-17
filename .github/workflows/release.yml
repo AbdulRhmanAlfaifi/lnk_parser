@@ -34,6 +34,7 @@ jobs:
         with:
           command: test
           target: ${{ matrix.platform.target }}
+          args: "--features cli"
 
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
